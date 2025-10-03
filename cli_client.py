@@ -5,7 +5,6 @@ from helpers.constants import PORT, FORMAT, HEADER_SIZE, DISCONNECT_MESSAGE
 
 SERVER = socket.gethostbyname(socket.gethostname())
 ADDR = (SERVER, PORT) # giving port 0 lets the OS pick an available port
-print(SERVER)
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(ADDR)
 
