@@ -48,9 +48,9 @@ Access the live prototype here. (If not deployed, please state 'N/A' or remove t
 
 | Category | Technologies Used | Notes |
 | :--- | :--- | :--- |
-| **Frontend** | [e.g., React, Next.js, HTML/CSS] | [e.g., Styled with Tailwind CSS, uses shadcn/ui] |
-| **Backend/Server** | [e.g., Node.js/Express, Python/Flask, N/A] | [e.g., Managed API endpoints/logic] |
-| **Database/BaaS** | [e.g., Firebase Firestore, Supabase, PostgreSQL] | [e.g., Used for storing menu and orders] |
+| **Frontend** | Terminal | Uses Python Click package to build a command line based application |
+| **Backend/Server** | Python | Uses sockets to establish server-client connection |
+| **Database/BaaS** | SQLite | Used for storing staff accounts, menus and orders |
 
 ---
 
@@ -64,8 +64,8 @@ If a judge needs to run your project on their machine, provide clear steps here:
     ```
 2.  **Install Dependencies:**
     ```bash
-    cd your-repo-name
-    npm install  # or yarn install / pip install -r requirements.txt
+    cd The-Final-Commit
+    pip install -r requirements.txt
     ```
 3.  **Setup Environment Variables (Mandatory for DB/Auth):**
     * Create a file named `.env` in the root directory.
@@ -77,5 +77,5 @@ If a judge needs to run your project on their machine, provide clear steps here:
         ```
 4.  **Start the Application:**
     ```bash
-    npm run dev # or specific start command
+    python cli_client.py
     ```
