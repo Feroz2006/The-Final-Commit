@@ -1,7 +1,7 @@
 import sqlite3
 import hashlib
 from typing import Any, Optional, Tuple
-from helpers.constants import DB_PATH, USER_TABLE, PENDING_ORDERS_TABLE, COMPLETED_ORDERS_TABLE, MENU_TABLE
+from constants import DB_PATH, USER_TABLE, PENDING_ORDERS_TABLE, COMPLETED_ORDERS_TABLE, MENU_TABLE
 
 class DatabaseManager:
     def __init__(self, db_path=DB_PATH):
