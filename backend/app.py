@@ -31,7 +31,7 @@ class AccountManager:
             CREATE TABLE IF NOT EXISTS {USER_TABLE} (
                 user_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email_id TEXT NOT NULL UNIQUE,
-                password_hash TEXT NOT NULL,
+                password_hash TEXT NOT NULL
             )
             """
         )
@@ -71,9 +71,9 @@ class AccountManager:
 
 
 class DataManager:
-    def __init__(self, db_manager: DatabaseManager):
-        self.db = db_manager
-        self.am = AccountManager(self.db) # verify if staff is logged in, then allow staff-only operations
+    def __init__(self, account_manager: AccountManager):
+        self.am = account_manager # verify if staff is logged in, then allow staff-only operations
+        self.db = account_manager.db
         self._initialize_db()
 
     def _initialize_db(self):
@@ -103,8 +103,8 @@ class DataManager:
                 item_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 item_name TEXT NOT NULL,
                 item_price DECIMAL NOT NULL,
-                item_description TEXT
-                item_availability BOOLEAN NOT NULL CHECK (item_availability IN (0, 1))
+                item_description TEXT,
+                item_availability BOOLEAN NOT NULL
             )
             """
         )
