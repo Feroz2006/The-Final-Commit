@@ -1,7 +1,7 @@
 import sqlite3
 import hashlib
 from typing import Any, Optional, Tuple
-from constants import DB_PATH, USER_TABLE, PENDING_ORDERS_TABLE, COMPLETED_ORDERS_TABLE, MENU_TABLE
+from .constants import DB_PATH, USER_TABLE, PENDING_ORDERS_TABLE, COMPLETED_ORDERS_TABLE, MENU_TABLE
 
 class DatabaseManager:
     def __init__(self, db_path=DB_PATH):
@@ -103,41 +103,55 @@ class DataManager:
                 item_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 item_name TEXT NOT NULL,
                 item_price DECIMAL NOT NULL,
-                item_description TEXT,
-                item_availability BOOLEAN NOT NULL
+                enabled BOOLEAN NOT NULL
             )
             """
         )
     
+
+    def staff_only(func):
+        def wrapper(self, *args, **kwargs):
+            if self.am.logged_in:
+                return func(self, *args, **kwargs)
+            else:
+                return "Access Denied: Staff Only Operation"
+        return wrapper
+            
+    
     def add_order():
         pass
     
-    # staff only
+    
+    @staff_only
     def set_order_complete():
         pass
 
-    # staff only
-    def get_pending_orders():
-        pass
 
-    # staff only
+    @staff_only
+    def get_pending_orders(self):
+        return self.db.execute(f"SELECT * FROM {PENDING_ORDERS_TABLE}", fetch=True)
+
+
+    @staff_only
     def get_completed_orders():
         pass
 
-    # staff only
+    @staff_only
     def add_menu_item():
         pass
 
-    # staff only
+    @staff_only
     def remove_menu_item():
         pass
 
-    # staff only
+    @staff_only
     def modify_menu_item():
         pass
 
-    def get_menu_items():
-        pass
+
+    def get_menu_items(self):
+        return self.db.execute(f"SELECT * FROM {MENU_TABLE}", fetch=True)
+    
 
 
     

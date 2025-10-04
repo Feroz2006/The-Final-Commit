@@ -59,13 +59,15 @@ Access the live prototype here. (If not deployed, please state 'N/A' or remove t
 If a judge needs to run your project on their machine, provide clear steps here:
 
 1.  *Clone Your Forked Repository:*
-    bash
+    ```bash
     git clone [https://github.com/Feroz2006/The-Final-Commit.git]
+    ```
     
 2.  *Install Dependencies:*
-    bash
-    cd The-Final-Commit
+    ```bash
+    cd The-Final-Commit/
     pip install -r requirements.txt
+    ```
     
 3.  *Setup Environment Variables (Mandatory for DB/Auth):*
     * Create a file named .env in the root directory.
@@ -73,9 +75,9 @@ If a judge needs to run your project on their machine, provide clear steps here:
         
         REACT_APP_FIREBASE_API_KEY=YOUR_KEY
         NODE_ENV=development
-        # etc.
+        etc.
         
 4.  *Start the Application:*
     ```bash
-    python cli_client.py
+    python cli.py
     ```

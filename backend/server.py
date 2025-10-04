@@ -1,8 +1,12 @@
 import socket
 import threading
-import os
-from helpers.constants import PORT, FORMAT, HEADER_SIZE, DISCONNECT_MESSAGE
+import json
+from helpers.constants import *
+from helpers.app_helpers import *
 
+dbm = DatabaseManager()
+acm = AccountManager(dbm)
+dtm = DataManager(acm)
 
 SERVER = socket.gethostbyname(socket.gethostname())
 ADDR = (SERVER, PORT) # giving port 0 lets the OS pick an available port
@@ -31,7 +35,7 @@ def handle_client(conn, addr) -> None:
             if msg == DISCONNECT_MESSAGE:
                 connected = False
             print(f"[{addr}] {msg}")
-            response = process_message(msg)
+            response = json.dumps(process_message(msg))
             response_encoded = response.encode(FORMAT)
             response_length = len(response_encoded)
             response_length = str(response_length).encode(FORMAT)
@@ -42,6 +46,13 @@ def handle_client(conn, addr) -> None:
     print(f"[DISCONNECTED] {addr} disconnected.")
 
 def process_message(msg) -> str:
+    match msg:
+        case "Get Menu":
+            print("Getting Menu")
+            return dtm.get_menu()
+        case "Create Order":
+            print("Creating Order")
+            return dtm.create_order()
     return "Test Response From Server"
 
 
@@ -51,3 +62,4 @@ start_server()
 
 
 # run using python -m backend.server
+# run sudo lsof -i :[PORTNUMBER] if Address already in use error occurs
