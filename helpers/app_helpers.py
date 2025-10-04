@@ -1,14 +1,14 @@
 import sqlite3
 import hashlib
 import json
-from typing import Any, Optional, Tuple
-from .constants import DB_PATH, USER_TABLE, PENDING_ORDERS_TABLE, COMPLETED_ORDERS_TABLE, MENU_TABLE
+from functools import wraps
+from .constants import *
 
 class DatabaseManager:
     def __init__(self, db_path=DB_PATH):
         self.db_path = db_path
 
-    def execute(self, query: str, params: Optional[Tuple[Any]] = None, fetch: bool = False) -> Optional[Any]:
+    def execute(self, query: str, params: tuple = None, fetch: bool = False):
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             if params:
@@ -18,15 +18,12 @@ class DatabaseManager:
             conn.commit()
             if fetch:
                 return cursor.fetchall()
-            return None
-
 
 class AccountManager:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
         self.logged_in: bool = False
-        self.user_id: Optional[int] = None
-        self.is_staff: bool = False
+        self.user_id: int = None
         self._initialize_db()
 
     def _initialize_db(self):
@@ -35,67 +32,62 @@ class AccountManager:
             CREATE TABLE IF NOT EXISTS {USER_TABLE} (
                 user_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email_id TEXT NOT NULL UNIQUE,
-                password_hash TEXT NOT NULL,
-                is_staff BOOLEAN NOT NULL DEFAULT 0
+                password_hash TEXT NOT NULL
             )
             """
         )
-        
+
     def _hash_password(self, password: str) -> str:
         return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
-    def create_account(self, email_id: str, password: str, is_staff: bool=False) -> bool:
-        password_hash = self._hash_password(password)
+    def create_account(self, email: str, password: str) -> bool:
         try:
             self.db.execute(
-                f"INSERT INTO {USER_TABLE} (email_id, password_hash, is_staff) VALUES (?, ?, ?)",
-                (email_id, password_hash, int(is_staff))
+                f"INSERT INTO {USER_TABLE} (email_id, password_hash) VALUES (?, ?)",
+                (email, self._hash_password(password))
             )
             return True
         except sqlite3.IntegrityError:
             return False
 
-    def login(self, email_id: str, password: str) -> bool:
-        password_hash = self._hash_password(password)
+    def login(self, email: str, password: str) -> bool:
         result = self.db.execute(
-            f"SELECT user_id, password_hash, is_staff FROM {USER_TABLE} WHERE email_id = ?",
-            (email_id,), fetch=True
+            f"SELECT user_id, password_hash FROM {USER_TABLE} WHERE email_id = ?",
+            (email,), fetch=True
         )
-        if result and result[0][1] == password_hash:
+        if result and result[0][1] == self._hash_password(password):
             self.logged_in = True
             self.user_id = result[0][0]
-            self.is_staff = bool(result[0][2])
             return True
         return False
 
     def logout(self):
         self.logged_in = False
         self.user_id = None
-        self.is_staff = False
 
-    def delete_account(self, email_id: str, password: str) -> bool:
-        if not self.login(email_id, password):
+    def delete_account(self, email: str, password: str) -> bool:
+        if not self.login(email, password):
             return False
         self.db.execute(
             f"DELETE FROM {USER_TABLE} WHERE email_id = ?",
-            (email_id,)
+            (email,)
         )
         self.logout()
         return True
 
-
 class DataManager:
     def __init__(self, account_manager: AccountManager):
-        self.am = account_manager  # will check permissions
+        self.am = account_manager
         self.db = account_manager.db
         self._initialize_db()
+        self._last_order = None
 
     def _initialize_db(self):
         self.db.execute(
             f"""
             CREATE TABLE IF NOT EXISTS {PENDING_ORDERS_TABLE} (
                 order_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
+                user_id INTEGER,
                 order_details TEXT NOT NULL,
                 FOREIGN KEY (user_id) REFERENCES {USER_TABLE}(user_id)
             )
@@ -105,7 +97,7 @@ class DataManager:
             f"""
             CREATE TABLE IF NOT EXISTS {COMPLETED_ORDERS_TABLE} (
                 order_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
+                user_id INTEGER,
                 order_details TEXT NOT NULL,
                 FOREIGN KEY (user_id) REFERENCES {USER_TABLE}(user_id)
             )
@@ -123,51 +115,45 @@ class DataManager:
         )
 
     def staff_only(func):
+        @wraps(func)
         def wrapper(self, *args, **kwargs):
-            if self.am.logged_in and self.am.is_staff:
+            if self.am.logged_in:
                 return func(self, *args, **kwargs)
             else:
                 return "Access Denied: Staff Only Operation"
         return wrapper
 
     def get_menu(self):
-        """Return list of menu items, including disabled ones."""
         rows = self.db.execute(
             f"SELECT item_id, item_name, item_price, enabled FROM {MENU_TABLE}",
             fetch=True
         )
-        menu = []
-        for item_id, name, price, enabled in rows:
-            menu.append({
-                "item_id": item_id,
-                "item_name": name,
-                "item_price": price,
-                "enabled": bool(enabled)
-            })
-        return menu
+        return [
+            {
+                "item_id": row[0],
+                "item_name": row[1],
+                "item_price": row[2],
+                "enabled": bool(row[3])
+            }
+            for row in rows
+        ]
 
     def create_order(self, order_json_str: str) -> dict:
-        """Create an order from JSON string. Validate items enabled, calculate total."""
-        if not self.am.logged_in:
-            return {"error": "User must be logged in to create order"}
-
         try:
             order_data = json.loads(order_json_str)
         except json.JSONDecodeError:
             return {"error": "Invalid JSON"}
 
-        # Validate items and quantities
         item_ids = []
         quantities = []
         for item in order_data:
-            # Extract item id and quantity from keys like item1_id, item1_quantity etc
             keys = list(item.keys())
             if len(keys) != 2:
                 return {"error": "Invalid item format"}
             id_key = [k for k in keys if k.endswith('_id')]
             qty_key = [k for k in keys if k.endswith('_quantity')]
             if not id_key or not qty_key:
-                return {"error": "Item keys must include '_id' and '_quantity'"}
+                return {"error": "Missing '_id' and '_quantity'"}
             item_id = item[id_key[0]]
             quantity = item[qty_key[0]]
             if not isinstance(item_id, int) or not isinstance(quantity, int):
@@ -175,7 +161,6 @@ class DataManager:
             item_ids.append(item_id)
             quantities.append(quantity)
 
-        # Check if all item_ids exist and enabled
         placeholders = ",".join("?" for _ in item_ids)
         menu_items = self.db.execute(
             f"SELECT item_id, item_name, item_price FROM {MENU_TABLE} WHERE item_id IN ({placeholders}) AND enabled = 1",
@@ -183,99 +168,84 @@ class DataManager:
             fetch=True
         )
         menu_item_ids = [row[0] for row in menu_items]
-
         if sorted(menu_item_ids) != sorted(item_ids):
             return {"error": "Some items are not available or disabled"}
 
-        # Calculate total price
         total_price = 0
         order_details = []
-        for i, (item_id, quantity) in enumerate(zip(item_ids, quantities)):
+        for item_id, quantity in zip(item_ids, quantities):
             item = next((row for row in menu_items if row[0] == item_id), None)
             if item:
                 _, name, price = item
-                item_price = price * quantity
-                total_price += item_price
+                total_price += price * quantity
                 for _ in range(quantity):
                     order_details.append({"item_id": item_id, "item_name": name, "item_price": price})
 
-        # Insert into pending orders
-        self.db.execute(
-            f"INSERT INTO {PENDING_ORDERS_TABLE} (user_id, order_details) VALUES (?, ?)",
-            (self.am.user_id, json.dumps(order_details))
-        )
-
-        payment_link = "http://mockpaymentgateway.com/pay/12345"  # mocked payment link
-
-        return {"total_price": total_price, "payment_link": payment_link}
+        self._last_order = {
+            "user_id": None,
+            "order_details": json.dumps(order_details),
+            "total_price": total_price,
+            "payment_link": "http://mockpaymentgateway.com/pay/12345"
+        }
+        return {
+            "total_price": total_price,
+            "payment_link": self._last_order["payment_link"],
+            "order_details": order_details
+        }
 
     def payment_complete(self) -> dict:
-        """Called when payment completes to confirm order."""
-        if not self.am.logged_in:
-            return {"error": "User must be logged in"}
+        if not self._last_order:
+            return {"error": "No order to complete"}
 
-        # Fetch last inserted pending order for this user as the one to confirm
-        result = self.db.execute(
-            f"""
-            SELECT order_id, order_details FROM {PENDING_ORDERS_TABLE} 
-            WHERE user_id = ? ORDER BY order_id DESC LIMIT 1
-            """,
-            (self.am.user_id,), fetch=True
-        )
-        if not result:
-            return {"error": "No pending order found"}
+        order = self._last_order
+        with sqlite3.connect(self.db.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                f"INSERT INTO {PENDING_ORDERS_TABLE} (user_id, order_details) VALUES (?, ?)",
+                (order["user_id"], order["order_details"])
+            )
+            order_id = cursor.lastrowid
+            conn.commit()
 
-        order_id, order_details_json = result[0]
-
-        # Prepare receipt info
-        order_details = json.loads(order_details_json)
-
+        self._last_order = None
         return {
             "order_id": order_id,
-            "total_price": sum(item["item_price"] for item in order_details),
-            "items_ordered": order_details
+            "total_price": order["total_price"],
+            "items_ordered": json.loads(order["order_details"]),
         }
 
     @staff_only
     def get_pending_orders(self):
-        """Return list of pending orders for staff."""
         rows = self.db.execute(
             f"SELECT order_id, order_details FROM {PENDING_ORDERS_TABLE}",
             fetch=True
         )
-        orders = []
-        for order_id, order_details_json in rows:
-            orders.append({
-                "order_id": order_id,
-                "order_details": json.loads(order_details_json)
-            })
-        return orders
+        return [
+            {
+                "order_id": row[0],
+                "order_details": json.loads(row[1])
+            }
+            for row in rows
+        ]
 
     @staff_only
     def set_order_complete(self, order_id: int, status: bool):
-        """Mark a pending order complete, moving it to completed orders."""
-        pending_order = self.db.execute(
+        row = self.db.execute(
             f"SELECT user_id, order_details FROM {PENDING_ORDERS_TABLE} WHERE order_id = ?",
             (order_id,), fetch=True
         )
-        if not pending_order:
+        if not row:
             return "Order not found"
-        user_id, order_details = pending_order[0]
-
-        # Remove from pending
+        user_id, order_details = row[0]
         self.db.execute(
             f"DELETE FROM {PENDING_ORDERS_TABLE} WHERE order_id = ?",
             (order_id,)
         )
-
-        # Add to completed if status is True
         if status:
             self.db.execute(
                 f"INSERT INTO {COMPLETED_ORDERS_TABLE} (order_id, user_id, order_details) VALUES (?, ?, ?)",
                 (order_id, user_id, order_details)
             )
-
-        # Return updated pending orders
         return self.get_pending_orders()
 
     @staff_only
@@ -284,13 +254,13 @@ class DataManager:
             f"SELECT order_id, order_details FROM {COMPLETED_ORDERS_TABLE}",
             fetch=True
         )
-        orders = []
-        for order_id, order_details_json in rows:
-            orders.append({
-                "order_id": order_id,
-                "order_details": json.loads(order_details_json)
-            })
-        return orders
+        return [
+            {
+                "order_id": row[0],
+                "order_details": json.loads(row[1])
+            }
+            for row in rows
+        ]
 
     @staff_only
     def add_menu_item(self, item_name: str, price: float):
