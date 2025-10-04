@@ -26,26 +26,37 @@ class Cli(cmd.Cmd):
     intro = "Welcome to SmartServe. Type help or ? to list commands.\n"
     prompt = "SmartServe> "
 
-    pending_orders = []
-    completed_orders = []
-
     def do_get_menu(self, arg):
-        """Get and display the current menu"""
-        menu_data = json.loads(send("Get Menu"))
-        headers = ["item_id", "item_name", "item_price", "available"]
-        rows = [[item["item_id"], item["item_name"], item["item_price"], "Yes" if item["enabled"] else "No"]
-                for item in menu_data if item["enabled"]]
+        """Get and display the current menu with unavailable items at bottom"""
+        rows, headers = self._get_menu_data()
         print(tabulate(rows, headers=headers, tablefmt="grid"))
 
+    def _get_menu_data(self, ids_only=False):
+        menu_data = json.loads(send("Get Menu"))
+        if ids_only:
+            return [item["item_id"] for item in menu_data if item["enabled"]]
+        headers = ["item_id", "item_name", "item_price", "available"]
+        # Separate enabled and disabled items
+        enabled_items = [item for item in menu_data if item["enabled"]]
+        disabled_items = [item for item in menu_data if not item["enabled"]]
+        # Prepare rows: enabled first then disabled
+        rows = []
+        rows.extend([[item["item_id"], item["item_name"], item["item_price"], "Yes"] for item in enabled_items])
+        rows.extend([[item["item_id"], item["item_name"], item["item_price"], "No"] for item in disabled_items])
+        return rows, headers
+    
+
     def do_send_order(self, arg):
-        """Create a new order interactively."""
-        send("Create Order")
+        """Create a new order using item ID and quantity. Check menu for valid item IDs"""
         order_items = []
         print("Enter your order (item_id and quantity). Type 'done' when finished.")
         while True:
             item_id = input("Enter item_id or 'done': ").strip()
             if item_id.lower() == 'done':
                 break
+            elif item_id not in self._get_menu_data(ids_only=True):
+                print("Invalid item_id, please try again.")
+                continue
             try:
                 quantity = int(input("Enter quantity: ").strip())
             except ValueError:
@@ -88,7 +99,7 @@ class Cli(cmd.Cmd):
         else:
             print("No pending orders at the moment.")
 
-    def do_complete(self, arg):
+    def do_complete_order(self, arg):
         """Complete an order by its order ID. Usage: complete [order_id]"""
         try:
             order_id = int(arg.strip())
