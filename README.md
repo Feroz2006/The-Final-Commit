@@ -1,9 +1,9 @@
-# 🛠️ PROJECT TITLE: [INSERT YOUR CREATIVE TITLE HERE]
+# 🛠️ PROJECT TITLE: SmartServe
 
 ## Idea Abstract
 
-**[INSERT CONCISE 2-3 SENTENCE SUMMARY HERE]**
-*Example: Our solution is a simple, real-time ordering system built for the Civil Canteen using Firebase. It provides students with a seamless ordering interface and gives staff immediate order verification tools.*
+*[An app for students to easily order food and help staff reduce load]*
+
 
 ---
 
@@ -11,8 +11,8 @@
 
 | Role | Name | GitHub Profile |
 | :--- | :--- | :--- |
-| **Team Member 1** | [Your Full Name Here] | [@YourGitHubUsername](link to your GitHub profile) |
-| **Team Member 2** | [Your Partner's Full Name Here] | [@PartnerGitHubUsername](link to partner's GitHub profile) |
+| *Team Member 1* | Feroz S | Feroz2006 https://github.com/Feroz2006 |
+| *Team Member 2* | Joseph Jayan | Joseph-mappila https://github.com/Joseph-mappila |
 
 ---
 
@@ -22,9 +22,9 @@ The following core features were successfully implemented and are showcased in t
 
 | Feature | Status | Key Implementation |
 | :--- | :--- | :--- |
-| **Student Ordering Interface** | ✅ COMPLETE | [e.g., Menu browsing, order placement, order history view] |
-| **Staff Live Order Viewer** | ✅ COMPLETE | [e.g., Real-time data feed, filtering by status] |
-| **Staff Payment Verification** | ✅ COMPLETE | [e.g., Staff clicks "Verify" button to change order status] |
+| *Student Ordering Interface* | ✅ COMPLETE | [e.g., Menu browsing, order placement, order history view] |
+| *Staff Live Order Viewer* | ✅ COMPLETE | [e.g., Real-time data feed, filtering by status] |
+| *Staff Payment Verification* | ✅ COMPLETE | [e.g., Staff clicks "Verify" button to change order status] |
 
 ---
 
@@ -32,15 +32,15 @@ The following core features were successfully implemented and are showcased in t
 
 ### 1. Project Demo Video (MANDATORY)
 
-The link below leads to our mandatory video presentation, which is **not longer than 5 minutes**.
+The link below leads to our mandatory video presentation, which is *not longer than 5 minutes*.
 
-➡️ **YouTube Video Link:** **[INSERT YOUR PUBLIC YOUTUBE LINK HERE]**
+➡️ *YouTube Video Link:* *[INSERT YOUR PUBLIC YOUTUBE LINK HERE]*
 
 ### 2. Live Deployment (If Applicable)
 
 Access the live prototype here. (If not deployed, please state 'N/A' or remove this section).
 
-➡️ **Live Demo Link:** [Insert Vercel/Netlify/Render Link Here]
+➡️ *Live Demo Link:* [Insert Vercel/Netlify/Render Link Here]
 
 ---
 
@@ -48,9 +48,9 @@ Access the live prototype here. (If not deployed, please state 'N/A' or remove t
 
 | Category | Technologies Used | Notes |
 | :--- | :--- | :--- |
-| **Frontend** | Terminal | Uses Python Click package to build a command line based application |
-| **Backend/Server** | Python | Uses sockets to establish server-client connection |
-| **Database/BaaS** | SQLite | Used for storing staff accounts, menus and orders |
+| *Frontend* | Terminal | Uses Python Click package to build a command line based application |
+| *Backend/Server* | Python | Uses sockets to establish server-client connection |
+| *Database/BaaS* | SQLite | Used for storing staff accounts, menus and orders |
 
 ---
 
@@ -58,24 +58,24 @@ Access the live prototype here. (If not deployed, please state 'N/A' or remove t
 
 If a judge needs to run your project on their machine, provide clear steps here:
 
-1.  **Clone Your Forked Repository:**
-    ```bash
-    git clone [Your Forked Repo URL]
-    ```
-2.  **Install Dependencies:**
-    ```bash
+1.  *Clone Your Forked Repository:*
+    bash
+    git clone [https://github.com/Feroz2006/The-Final-Commit.git]
+    
+2.  *Install Dependencies:*
+    bash
     cd The-Final-Commit
     pip install -r requirements.txt
-    ```
-3.  **Setup Environment Variables (Mandatory for DB/Auth):**
-    * Create a file named `.env` in the root directory.
+    
+3.  *Setup Environment Variables (Mandatory for DB/Auth):*
+    * Create a file named .env in the root directory.
     * Add your API keys or database connection strings here:
-        ```
+        
         REACT_APP_FIREBASE_API_KEY=YOUR_KEY
         NODE_ENV=development
         # etc.
-        ```
-4.  **Start the Application:**
+        
+4.  *Start the Application:*
     ```bash
     python cli_client.py
     ```
