@@ -15,26 +15,18 @@ server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(ADDR)
 
 def start_server() -> None:
-    server.settimeout(1.0)  # 1-second timeout on accept()
-    should_stop = False
     try:
         server.listen()
         print(f"[LISTENING] Server is listening on {SERVER}:{PORT}")
-        while not should_stop:
-            try:
-                conn, addr = server.accept()
-                thread = threading.Thread(target=handle_client, args=(conn, addr))
-                thread.start()
-                print(f"[ACTIVE CONNECTIONS] {threading.active_count() - 1}")
-            except socket.timeout:
-                # Timeout lets loop check again, potentially to stop
-                continue
+        while True:
+            conn, addr = server.accept()
+            thread = threading.Thread(target=handle_client, args=(conn, addr))
+            thread.start()
+            print(f"[ACTIVE CONNECTIONS] {threading.active_count() - 1}")
     except KeyboardInterrupt:
         print("\n[SHUTDOWN] Server is shutting down...")
-        should_stop = True
     finally:
         server.close()
-
 
 def handle_client(conn, addr) -> None:
     print(f"[NEW CONNECTION] {addr} connected.")
@@ -47,17 +39,21 @@ def handle_client(conn, addr) -> None:
             if msg == DISCONNECT_MESSAGE:
                 connected = False
             print(f"[{addr}] {msg}")
-            response = json.dumps(process_message(msg))
+            response_obj = process_message(msg)
+            response = json.dumps(response_obj)  # Serialize response as JSON
             response_encoded = response.encode(FORMAT)
             response_length = len(response_encoded)
-            response_length = str(response_length).encode(FORMAT)
-            response_length += b' ' * (HEADER_SIZE - len(response_length))
-            conn.send(response_length)
+            response_length_str = str(response_length).encode(FORMAT)
+            response_length_str += b' ' * (HEADER_SIZE - len(response_length_str))
+            conn.send(response_length_str)
             conn.send(response_encoded)
     conn.close()
     print(f"[DISCONNECTED] {addr} disconnected.")
 
-def process_message(msg) -> str:
+def process_message(msg) -> object:
+    """
+    Returns a Python object (dict, list, etc.) which will be serialized once in handle_client().
+    """
     try:
         data = json.loads(msg)
         if (
@@ -68,28 +64,26 @@ def process_message(msg) -> str:
             return dtm.create_order(msg)
         if isinstance(data, dict) and data.get("payment_complete") is True:
             print("Processing payment completion")
-            receipt = dtm.payment_complete()
-            return json.dumps(receipt)
+            return dtm.payment_complete()
         if isinstance(data, dict) and data.get("action") == "login":
             email = data.get("email")
             password = data.get("password")
             success = acm.login(email, password)
-            return json.dumps({"status": "success" if success else "failure"})
+            return {"status": "success" if success else "failure"}
         if isinstance(data, dict) and data.get("action") == "view_pending_orders":
             print("Fetching pending orders")
             orders = dtm.get_pending_orders()
-            return json.dumps(orders)
+            return orders
         if isinstance(data, dict) and "order_id" in data and "status" in data:
             print(f"Completing order {data['order_id']} with status {data['status']}")
-            result = dtm.set_order_complete(data["order_id"], data["status"])
-            return json.dumps(result)
+            return dtm.set_order_complete(data["order_id"], data["status"])
     except json.JSONDecodeError:
         pass
-    match msg:
-        case "Get Menu":
-            print("Getting Menu")
-            menu = dtm.get_menu()
-            return json.dumps(menu)  # Serialize to JSON string!
-    return json.dumps({"error": "Invalid request"})
+    # fallback for 'Get Menu' command
+    if msg == "Get Menu":
+        print("Getting Menu")
+        return dtm.get_menu()
+    return {"error": "Invalid request"}
+
 
 start_server()

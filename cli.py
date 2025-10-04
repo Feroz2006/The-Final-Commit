@@ -31,44 +31,58 @@ class Cli(cmd.Cmd):
         self.logged_in = False
 
     def do_login(self, arg):
-        """Login as staff user. Usage: login"""
+        """Login as staff user."""
         email = input("Enter email: ").strip()
         password = input("Enter password: ").strip()
+
         login_data = json.dumps({"action": "login", "email": email, "password": password})
         response_str = send(login_data)
         try:
             response = json.loads(response_str)
-            if response.get("status") == "success":
-                print("Login successful.")
-                self.logged_in = True
-            else:
-                print("Login failed.")
         except json.JSONDecodeError:
-            print("Error decoding server response during login.")
+            print("Error decoding server response.")
+            return
+
+        if response.get("status") == "success":
+            print("Login successful.")
+            self.logged_in = True
+        else:
+            print("Login failed:", response.get("error", "Invalid login credentials"))
 
     def do_get_menu(self, arg):
         """Get and display the current menu with unavailable items at bottom"""
-        rows, headers = self._get_menu_data()
-        print(tabulate(rows, headers=headers, tablefmt="grid"))
-
-    def _get_menu_data(self, ids_only=False):
         raw_response = send("Get Menu")
-        menu_data = json.loads(raw_response)
-        if isinstance(menu_data, str):
-            menu_data = json.loads(menu_data)
-        if ids_only:
-            return [item["item_id"] for item in menu_data if item["enabled"]]
-        print(menu_data)
+        try:
+            menu_data = json.loads(raw_response)
+            if isinstance(menu_data, str):
+                menu_data = json.loads(menu_data)
+        except json.JSONDecodeError:
+            print("Error decoding server response.")
+            return
         headers = ["item_id", "item_name", "item_price", "available"]
         enabled_items = [item for item in menu_data if item["enabled"]]
         disabled_items = [item for item in menu_data if not item["enabled"]]
         rows = []
         rows.extend([[item["item_id"], item["item_name"], item["item_price"], "Yes"] for item in enabled_items])
         rows.extend([[item["item_id"], item["item_name"], item["item_price"], "No"] for item in disabled_items])
-        return rows, headers
+        print(tabulate(rows, headers=headers, tablefmt="fancy_grid"))
+
+    def _get_menu_data(self, ids_only=False):
+        raw_response = send("Get Menu")
+        try:
+            menu_data = json.loads(raw_response)
+            if isinstance(menu_data, str):
+                menu_data = json.loads(menu_data)
+        except json.JSONDecodeError:
+            print("Error decoding server response.")
+            return []
+
+        if ids_only:
+            return [item["item_id"] for item in menu_data if item["enabled"]]
+        return menu_data
 
     def do_send_order(self, arg):
-        """Create a new order using item ID and quantity. Check menu for valid item IDs."""
+        """Create a new order using item ID and quantity."""
         order_items = []
         available_ids = self._get_menu_data(ids_only=True)
         print("Enter your order (item_id and quantity). Type 'done' when finished.")
@@ -107,7 +121,6 @@ class Cli(cmd.Cmd):
 
         total_price = response.get("total_price")
         payment_link = response.get("payment_link")
-
         print("\nOrder Summary:")
         for item in order_items:
             print(f"Item ID: {item['item_id']}, Quantity: {item['item_quantity']}")
@@ -121,10 +134,8 @@ class Cli(cmd.Cmd):
 
             try:
                 receipt = json.loads(receipt_str)
-
                 if isinstance(receipt, str):
                     receipt = json.loads(receipt)
-
             except json.JSONDecodeError:
                 print("Error decoding receipt from server.")
                 return
@@ -170,7 +181,7 @@ class Cli(cmd.Cmd):
         try:
             updated_orders = json.loads(response_str)
             if isinstance(updated_orders, str):
-                print(updated_orders)  # error message
+                print(updated_orders)
                 return
             print(f"Order {order_id} marked as completed.\n")
             print("Updated Pending Orders:")
@@ -199,9 +210,10 @@ class Cli(cmd.Cmd):
         return True
 
     def emptyline(self):
-        # Do nothing on empty input line
         pass
 
 if __name__ == "__main__":
     client.connect(ADDR)
     Cli().cmdloop()
+
+

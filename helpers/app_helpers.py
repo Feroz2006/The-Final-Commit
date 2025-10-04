@@ -161,19 +161,18 @@ class DataManager:
             item_ids.append(item_id)
             quantities.append(quantity)
 
+        # Check availability of requested items: set for uniqueness
         placeholders = ",".join("?" for _ in item_ids)
         menu_items = self.db.execute(
             f"SELECT item_id, item_name, item_price FROM {MENU_TABLE} WHERE item_id IN ({placeholders}) AND enabled = 1",
-            tuple(item_ids),
+            tuple(set(item_ids)),
             fetch=True
         )
-        
-        menu_item_ids = {row[0] for row in menu_items}  # use a set of unique enabled item IDs
-        requested_item_ids = set(item_ids)  # unique requested item IDs
 
-        if not requested_item_ids.issubset(menu_item_ids):
+        enabled_ids = {row[0] for row in menu_items}
+        requested_ids = set(item_ids)
+        if not requested_ids.issubset(enabled_ids):
             return {"error": "Some items are not available or disabled"}
-
 
         total_price = 0
         order_details = []
@@ -200,7 +199,6 @@ class DataManager:
     def payment_complete(self) -> dict:
         if not self._last_order:
             return {"error": "No order to complete"}
-
         order = self._last_order
         with sqlite3.connect(self.db.db_path) as conn:
             cursor = conn.cursor()
@@ -210,7 +208,6 @@ class DataManager:
             )
             order_id = cursor.lastrowid
             conn.commit()
-
         self._last_order = None
         return {
             "order_id": order_id,
@@ -295,3 +292,5 @@ class DataManager:
                 (int(enabled), item_id)
             )
         return "Menu item updated"
+
+
