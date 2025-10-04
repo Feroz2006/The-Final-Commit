@@ -22,8 +22,8 @@ class DatabaseManager:
 class AccountManager:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
-        self.logged_in: bool = False
-        self.user_id: int = None
+        self.logged_in = False
+        self.user_id = None
         self._initialize_db()
 
     def _initialize_db(self):
@@ -167,9 +167,13 @@ class DataManager:
             tuple(item_ids),
             fetch=True
         )
-        menu_item_ids = [row[0] for row in menu_items]
-        if sorted(menu_item_ids) != sorted(item_ids):
+        
+        menu_item_ids = {row[0] for row in menu_items}  # use a set of unique enabled item IDs
+        requested_item_ids = set(item_ids)  # unique requested item IDs
+
+        if not requested_item_ids.issubset(menu_item_ids):
             return {"error": "Some items are not available or disabled"}
+
 
         total_price = 0
         order_details = []

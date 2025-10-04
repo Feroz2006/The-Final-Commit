@@ -52,9 +52,13 @@ class Cli(cmd.Cmd):
         print(tabulate(rows, headers=headers, tablefmt="grid"))
 
     def _get_menu_data(self, ids_only=False):
-        menu_data = json.loads(send("Get Menu"))
+        raw_response = send("Get Menu")
+        menu_data = json.loads(raw_response)
+        if isinstance(menu_data, str):
+            menu_data = json.loads(menu_data)
         if ids_only:
             return [item["item_id"] for item in menu_data if item["enabled"]]
+        print(menu_data)
         headers = ["item_id", "item_name", "item_price", "available"]
         enabled_items = [item for item in menu_data if item["enabled"]]
         disabled_items = [item for item in menu_data if not item["enabled"]]
