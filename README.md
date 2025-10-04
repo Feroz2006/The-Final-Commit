@@ -79,5 +79,6 @@ If a judge needs to run your project on their machine, provide clear steps here:
         
 4.  *Start the Application:*
     ```bash
+    python -m backend.server
     python cli.py
     ```
